@@ -9,7 +9,9 @@ No framework, no build step, no dependencies. Open `index.html` and it runs.
 ```
 index.html          markup — all copy and the five editorial photographs
 css/styles.css      one stylesheet, custom properties at the top
-js/app.js           stock data, rendering, scroll behaviour, bag
+js/app.js           stock data, rendering, bag, filters, rail
+js/motion.js        GSAP layer — scroll choreography, marquees, water tap
+assets/vendor/      GSAP + ScrollTrigger + Lenis, vendored (no CDN)
 scripts/fetch-images.sh   mirror the photography locally (optional)
 ```
 
@@ -66,10 +68,50 @@ display the same way.
 **Copy, hours, address, staff, repair prices** — plain markup in
 `index.html`.
 
+## Motion
+
+`js/motion.js` layers GSAP over the base site. It is strictly additive: if the
+libraries fail to load, or the visitor asks for reduced motion, the file exits
+at its first line and `js/app.js`'s own IntersectionObserver reveals carry the
+page unchanged. Nothing in the shop depends on it.
+
+- **Hero** — the headline's three lines wipe up on load, then the whole block
+  drifts and fades against a slowly scaling photograph on `scrub: 1`.
+- **Headings** rise word by word; each word is wrapped at runtime by a small
+  splitter in `motion.js`, so the markup stays plain text.
+- **Photographs are uncovered, not faded.** The frame opens from the bottom via
+  `clip-path` while the picture inside settles back from a 1.22 over-scale.
+  Cards go through `ScrollTrigger.batch` so twelve of them cost one pass.
+- **Marquees** carry a resting drift, lean into your scroll direction and
+  speed up with it, then settle. **Tap a band and it reverses and races** at 9x
+  before easing back — the flowing text responds to touch.
+- **Tap anywhere for the water.** The shop waterproofs boots, so the page acts
+  like a waxed upper: the strike flattens, beads back up, and the droplets
+  scatter, roll and evaporate rather than soaking in. Canvas 2D, DPR-capped,
+  and the loop stops dead when the last bead is gone.
+
+### Libraries
+
+GSAP 3.15.0, ScrollTrigger and Lenis 1.3.26 are **vendored** into
+`assets/vendor/` rather than pulled from a CDN — the site then works offline,
+behind a strict CSP, and on a venue's hostile wifi. 135 KB total. Licenses sit
+beside them. To update: `npm i gsap lenis` and copy `dist/gsap.min.js`,
+`dist/ScrollTrigger.min.js` and `dist/lenis.min.js` across.
+
+Note for anyone following older Lenis guides: `smoothTouch` was a Lenis 0.x
+option and does nothing in 1.x. The current names are `syncTouch`,
+`syncTouchLerp` and `touchInertiaMultiplier`, which is what `motion.js` uses.
+
 ## Behaviour notes
 
-- Reveals, marquees and parallax all sit behind `prefers-reduced-motion`,
-  which switches the page to a static layout.
+- Reveals, marquees, parallax and the water all sit behind
+  `prefers-reduced-motion`, which switches the page to a static layout.
+- Device tier is probed from `hardwareConcurrency` / `deviceMemory`, not screen
+  width. Thin hardware gets fewer droplets, a capped pixel ratio and no Lenis
+  smoothing; it does not get a shrunken version of the same workload.
+- Lenis and ScrollTrigger share one RAF loop (`gsap.ticker` drives Lenis with
+  `autoRaf: false`) so the two never fight over scroll position — the usual
+  cause of "smooth on desktop, laggy on phone".
 - Parallax is skipped entirely on coarse pointers; touch keeps native
   momentum scrolling on the window-display rail rather than fighting it with
   a custom drag.

@@ -11,6 +11,8 @@
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const coarse = matchMedia('(pointer: coarse)').matches;
   const money  = n => '£' + n.toFixed(n % 1 ? 2 : 0);
+  // js/motion.js takes over reveals, marquees and parallax when GSAP is present
+  const MOTION = !!(window.gsap && window.ScrollTrigger) && !reduce;
 
   /* ---------- image source helper ------------------------------------
      One place to change if you mirror the photography locally:
@@ -137,7 +139,9 @@
 
   /* ---------- reveal on scroll -------------------------------------- */
   const revealables = () => $$('.reveal:not(.in)');
-  if (reduce || !('IntersectionObserver' in window)) {
+  if (MOTION) {
+    /* the motion layer owns these */
+  } else if (reduce || !('IntersectionObserver' in window)) {
     $$('.reveal').forEach(el => el.classList.add('in'));
   } else {
     const io = new IntersectionObserver((entries, obs) => {
@@ -180,7 +184,7 @@
     const half = el.scrollWidth / 2 || 1;
     return { el, half, x: 0, speed: (+el.dataset.speed || 40) * (+el.dataset.dir || 1), on: true };
   });
-  if (marquees.length && !reduce) {
+  if (marquees.length && !reduce && !MOTION) {
     const mio = new IntersectionObserver(es => es.forEach(e => {
       const m = marquees.find(m => m.el === e.target);
       if (m) m.on = e.isIntersecting;
@@ -189,14 +193,14 @@
   }
 
   /* ---------- parallax + rAF loop ------------------------------------ */
-  const paras = reduce || coarse ? [] : $$('[data-parallax]');
+  const paras = (reduce || coarse || MOTION) ? [] : $$('[data-parallax]');
   let ticking = false, last = performance.now();
 
   function frame(now) {
     const dt = Math.min((now - last) / 1000, 0.05);
     last = now;
 
-    if (!reduce) {
+    if (!reduce && !MOTION) {
       for (const m of marquees) {
         if (!m.on) continue;
         m.x -= m.speed * dt;
