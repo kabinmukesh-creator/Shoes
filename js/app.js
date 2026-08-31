@@ -298,13 +298,15 @@
     }
     body.innerHTML = lines.map(l => `
       <div class="bagline">
-        <img src="${PHOTO(l.img, 200, 65)}" alt="" loading="lazy">
+        <div class="bagline__i"><img src="${PHOTO(l.img, 200, 65)}" alt="" loading="lazy" data-spare="${l.spare || ''}"></div>
         <div class="bagline__t">
           <b>${l.name}</b>
           <small>${l.brand} · ${money(l.price)}${l.qty > 1 ? ` × ${l.qty}` : ''}</small>
           <button class="bagline__x" data-drop="${l.id}">Remove</button>
         </div>
       </div>`).join('');
+    // the guard runs on these too — a dead photo must never leave a broken icon
+    $$('img', body).forEach(i => guardImage(i, '', i.dataset.spare));
   }
 
   function openBag(open) {
@@ -317,7 +319,7 @@
     if (add) {
       const p = STOCK.find(s => s.id === add.dataset.add);
       const line = lines.find(l => l.id === p.id);
-      line ? line.qty++ : lines.push({ id:p.id, name:p.name, brand:p.brand, price:p.price, img:p.img, qty:1 });
+      line ? line.qty++ : lines.push({ id:p.id, name:p.name, brand:p.brand, price:p.price, img:p.img, spare:p.spare, qty:1 });
       save(); renderBag(); openBag(true);
       return;
     }
